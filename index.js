@@ -2,8 +2,8 @@
 
 var util = require('util'),
     winston = require('winston'),
-    AWS = require('aws-sdk'),
     cloudWatchIntegration = require('./lib/cloudwatch-integration'),
+    {CloudWatchLogs} = require('@aws-sdk/client-cloudwatch-logs'),
     isEmpty = require('lodash.isempty'),
     assign = require('lodash.assign'),
     isError = require('lodash.iserror'),
@@ -35,14 +35,6 @@ var WinstonCloudWatch = function(options) {
   if (options.cloudWatchLogs) {
     this.cloudwatchlogs = options.cloudWatchLogs;
   } else {
-    if (this.proxyServer) {
-      AWS.config.update({
-        httpOptions: {
-          agent: require('proxy-agent')(this.proxyServer)
-        }
-      });
-    }
-
     var config = {};
 
     if (awsAccessKeyId && awsSecretKey && awsRegion) {
@@ -54,11 +46,18 @@ var WinstonCloudWatch = function(options) {
       config = { region: awsRegion };
     }
 
+    if (this.proxyServer) {
+      config.requestHandler = new (require('@aws-sdk/node-http-handler').NodeHttpHandler)({
+        httpAgent: require('proxy-agent')(this.proxyServer),
+        httpsAgent: require('proxy-agent')(this.proxyServer)
+      })
+    }
+
     if (options.awsOptions) {
       config = assign(config, options.awsOptions);
     }
 
-    this.cloudwatchlogs = new AWS.CloudWatchLogs(config);
+    this.cloudwatchlogs = new CloudWatchLogs(config);
   }
 
   debug('constructor finished');
@@ -69,7 +68,7 @@ util.inherits(WinstonCloudWatch, winston.Transport);
 WinstonCloudWatch.prototype.log = function (info, callback) {
   debug('log (called by winston)', info);
 
-  if (!isEmpty(info.message) || isError(info.message)) { 
+  if (!isEmpty(info.message) || isError(info.message)) {
     this.add(info);
   }
 
@@ -134,7 +133,7 @@ WinstonCloudWatch.prototype.submit = function(callback) {
   );
 };
 
-WinstonCloudWatch.prototype.kthxbye = function(callback) {  
+WinstonCloudWatch.prototype.kthxbye = function(callback) {
   debug('clearing interval');
   clearInterval(this.intervalId);
   this.intervalId = null;

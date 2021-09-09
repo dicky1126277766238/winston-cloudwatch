@@ -39,7 +39,7 @@ describe('index', function() {
 
     mockery.registerMock('proxy-agent', function() { return 'fake' });
     mockery.registerMock('winston', stubbedWinston);
-    mockery.registerMock('aws-sdk', stubbedAWS);
+    mockery.registerMock('@aws-sdk/client-cloudwatch-logs', stubbedAWS);
     mockery.registerMock('./lib/cloudwatch-integration', stubbedCloudwatchIntegration);
 
     mockery.registerAllowable('../index.js');
@@ -91,8 +91,8 @@ describe('index', function() {
         proxyServer: 'http://test.com'
       };
       var transport = new WinstonCloudWatch(options);
-      stubbedAWS.config.update.calledOnce.should.equal(true);
-      stubbedAWS.config.update.args[0][0].httpOptions.agent.should.equal('fake');
+      transport.cloudwatchlogs.fakeOptions.requestHandler.httpAgent.should.equal('fake');
+      transport.cloudwatchlogs.fakeOptions.requestHandler.httpsAgent.should.equal('fake');
     });
 
   });
@@ -134,7 +134,7 @@ describe('index', function() {
 
       before(function(done) {
         transport = new WinstonCloudWatch(options);
-        transport.log({ level: 'level', message: 'message', something: 'else' }, 
+        transport.log({ level: 'level', message: 'message', something: 'else' },
           function() {
             clock.tick(2000);
             done();
@@ -172,7 +172,7 @@ describe('index', function() {
 
         var options = {
           messageFormatter: function(log) {
-            return log.level + ' ' + log.message + ' ' + log.something; 
+            return log.level + ' ' + log.message + ' ' + log.something;
           }
         };
 
@@ -279,20 +279,20 @@ describe('index', function() {
         transport.add({ message: 'message' + index });
       }
 
-      transport.kthxbye(function() {        
+      transport.kthxbye(function() {
         transport.logEvents.length.should.equal(0);
         done();
       });
 
       clock.tick(1);
     });
-    
-    it('should exit if logs are not cleared by the timeout period', function(done) {            
+
+    it('should exit if logs are not cleared by the timeout period', function(done) {
       transport.add({ message: 'message' });
       transport.submit.callsFake(function(cb){
         clock.tick(500);
         cb(); // callback is called but logEvents is not cleared
-      }); 
+      });
 
       transport.kthxbye(function(error) {
         error.should.be.Error();

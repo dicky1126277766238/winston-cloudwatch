@@ -1,6 +1,6 @@
 import TransportStream = require("winston-transport");
 
-import { CloudWatch, CloudWatchLogs } from "aws-sdk";
+import {CloudWatchLogs, CloudWatchLogsClientConfig, DescribeLogStreamsCommandOutput} from "@aws-sdk/client-cloudwatch-logs";
 
 import winston = require('winston');
 
@@ -36,7 +36,7 @@ declare class WinstonCloudwatch extends TransportStream {
     streamName: string,
     cb: ((
       err: Error,
-      data: CloudWatchLogs.Types.DescribeLogStreamsResponse
+      data: DescribeLogStreamsCommandOutput
     ) => void)
   ): void;
   ignoreInProgress(cb: ((err: Error) => void)): void;
@@ -60,7 +60,7 @@ declare namespace WinstonCloudwatch {
     awsAccessKeyId?: string;
     awsSecretKey?: string;
     awsRegion?: string;
-    awsOptions?: CloudWatch.Types.ClientConfiguration;
+    awsOptions?: CloudWatchLogsClientConfig;
     jsonMessage?: boolean;
     messageFormatter?: (logObject: LogObject) => string;
     proxyServer?: string;
